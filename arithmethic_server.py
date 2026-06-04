@@ -76,6 +76,7 @@ def process_req(msg: bytes, hist : list[str]):
     SUB <N1> <N2> ->       Subtract N2 from N1. \n
     MUL <N1> <N2> ->       Multiply N1 by N2. \n
     DIV <N1> <N2> ->       Integer-divide N1 by N2. \n
+    MOD <N1> <N2> ->       Integer-divide N1 by N2 and get remainder. \n
     RND <N> ->             Return a random integer in [1, N]. \n
     HIST ->                Show up to the last 5 valid operations for this connection only. \n
     HELP ->                [command] Show all commands, or detailed help for one command. \n
@@ -111,7 +112,7 @@ def process_req(msg: bytes, hist : list[str]):
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
 
-    if command in ["ADD","SUB","MUL","DIV"]:
+    if command in ["ADD","SUB","MUL","DIV","MOD"]:
         if not valid_param_count(2):
             return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
@@ -124,7 +125,7 @@ def process_req(msg: bytes, hist : list[str]):
         if param2_parsed == "ERR":
             return error(f"{param2} is not an integer.")
 
-        if param2_parsed == 0 and command == "DIV":
+        if param2_parsed == 0 and (command == "DIV" or command == "MOD"):
             return error(f"Division by 0.")
 
         if command == "ADD":
@@ -133,9 +134,11 @@ def process_req(msg: bytes, hist : list[str]):
             res = param1_parsed - param2_parsed
         elif command == "MUL":
             res = param1_parsed * param2_parsed
-        else:
+        elif command == "DIV":
             res = param1_parsed // param2_parsed
-        
+        else: # For modulo command
+            res = param1_parsed % param2_parsed
+
         upd_hist(f"{command} {param1_parsed} {param2_parsed} -> {res}")
 
         return success(f"{res}")
@@ -173,6 +176,7 @@ def process_req(msg: bytes, hist : list[str]):
                 "SUB <N1> <N2> - to subtract N2 from N1",
                 "MUL <N1> <N2> - to multiply N1 by N2",
                 "DIV <N1> <N2> - to divide N1 by N2",
+                "MOD <N1> <N2> - to divide N1 by N2 and get the remainder. ",
                 "RND <N> - to generate a random number between 1 and N, inclusive",
                 "HIST - to show the last 5 valid operations in the session",
                 "HELP [command] - to display syntax and semantics of a specific command.",
@@ -182,7 +186,7 @@ def process_req(msg: bytes, hist : list[str]):
             help_msg = "\r\n".join(lines)
             return success(help_msg + "\r\n")
 
-        if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
+        if params not in ["ADD","SUB","MUL","DIV","MOD","RND","HIST","HELP","QUIT"]:
             return error(f"Invalid command name.")
 
         if params == "ADD":
@@ -193,12 +197,14 @@ def process_req(msg: bytes, hist : list[str]):
             res = "MUL <N1> <N2> - to multiply N1 by N2"
         elif params == "DIV":
             res = "DIV <N1> <N2> - to divide N1 by N2"
+        elif params == "MOD":
+            res = "MOD <N1> <N2> - to divide N1 by N2 and get the remainder."
         elif params == "RND":
             res = "RND <N> - to generate a random number between 1 and N, inclusive"
         elif params == "HIST":
             res = "HIST - to show the last 5 valid operations in the session"
         elif params == "HELP":
-            res = "HELP [command] - to display syntax and semantics of a specific command. \r\n If no command is specified, it will display all available commands and meanings"
+            res = "HELP [command] - to display syntax and semantics of a specific command.\r\nIf no command is specified, it will display all available commands and meanings"
         elif params == "QUIT":
             res = "QUIT - to end the current session of the arithmetic server"
         
