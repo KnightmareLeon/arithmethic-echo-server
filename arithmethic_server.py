@@ -78,7 +78,9 @@ def process_req(msg: str):
             return "ERR"
 
     msg = msg.decode()
-    command, params = msg.split(" ", 1)
+    parts = msg.split(" ", 1)
+    command = parts[0]
+    params = parts[1] if len(parts) > 1 else ""
 
     res = ""
     if command == "ADD":
