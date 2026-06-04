@@ -73,9 +73,15 @@ def process_req(msg: str):
     """
 
     def success(result: str, closing: bool = False) -> tuple[str,bool]:
-        return f"OK {result}", closing
+        return f"OK {result} \r\n", closing
     def error(message: str, closing: bool = False) -> tuple[str,bool]:
-        return f"ERR {message}", closing
+        return f"ERR {message} \r\n", closing
+    def valid_param_count(count: int, exact: bool = True) -> bool:
+        if not exact:
+            return len(params.split(" ")) < count
+        return params == "" if count == 0 else len(params.split(" ")) == count and params != ""
+    def invalid_param_count_error(command: str):
+        return f"{error( f"Invalid number of arguments to {command}")[0]}", False
     def parse_int(param: str):
         try:
             res = int(param)
@@ -88,24 +94,24 @@ def process_req(msg: str):
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
     if command == "ADD":
-        if len(params.split(" ")) != 2:
-            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        if not valid_param_count(2):
+            return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
     elif command == "SUB":
-        if len(params.split(" ")) != 2:
-            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        if not valid_param_count(2):
+            return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
     elif command == "MUL":
-        if len(params.split(" ")) != 2:
-            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        if not valid_param_count(2):
+            return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
     elif command == "DIV":
-        if len(params.split(" ")) != 2:
-            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        if not valid_param_count(2):
+            return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
     elif command == "RND":
-        if len(params.split(" ")) != 1 or params == "":
-            return error(f"{command} NEEDS EXACTLY ONE PARAMETER.")
+        if not valid_param_count(1):
+            return invalid_param_count_error(command)
         param = parse_int(params)
         if param == "ERR":
             return error(f"{param} IS NOT AN INTEGER.")
@@ -116,56 +122,54 @@ def process_req(msg: str):
         return success(f"{random.randint(1,param)}")
 
     elif command == "HIST":
-        if len(params.split(" ")) != 0:
-            return error(f"{command} NEEDS NO PARAMETER.")
+        if not valid_param_count(0):
+            return invalid_param_count_error(command)
     elif command == "HELP":
-        if len(params.split(" ")) > 1:
-            return error(f"{command} NEEDS ONE OR NO PARAMETER.")
+        if not valid_param_count(2, exact=False):
+            return invalid_param_count_error(command)
         if params == "":
-            return success(
-"""
-COMMANDS            PARAMS
-==========================
-ADD                 <N1> <N2>
-SUB                 <N1> <N2>
-MUL                 <N1> <N2>
-DIV                 <N1> <N2>
-RND                 <N>
-HIST
-HELP
-QUIT
-"""
-        )
+            lines = [
+                "The following commands are available:",
+                "ADD <N1> <N2> - to add N1 and N2",
+                "SUB <N1> <N2> - to subtract N2 from N1",
+                "MUL <N1> <N2> - to multiply N1 by N2",
+                "DIV <N1> <N2> - to divide N1 by N2",
+                "RND <N> - to generate a random number between 1 and N, inclusive",
+                "HIST - to show the last 5 valid operations in the session",
+                "HELP [command] - to display syntax and semantics of a specific command.",
+                "If no command is specified, it will display all available commands and meanings",
+                "QUIT - to end the current session of the arithmetic server"
+            ]
+            help_msg = "\r\n".join(lines)
+            return success(help_msg)
 
         if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
             return error(f"INVALID COMMAND NAME. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
 
-        res = "\nCOMMAND            MEANING\n"
-        res += "=======================================\n"
         if params == "ADD":
-            res += "ADD <N1> <N2>       Add N1 and N2."
+            res = "ADD <N1> <N2> - to add N1 and N2"
         elif params == "SUB":
-            res += "SUB <N1> <N2>       Subtract N2 from N1."
+            res = "SUB <N1> <N2> - to subtract N2 from N1"
         elif params == "MUL":
-            res += "MUL <N1> <N2>       Multiply N1 by N2."
+            res = "MUL <N1> <N2> - to multiply N1 by N2"
         elif params == "DIV":
-            res += "DIV <N1> <N2>       Integer-divide N1 by N2."
+            res = "DIV <N1> <N2> - to divide N1 by N2"
         elif params == "RND":
-            res += "RND <N>             Return a random integer in [1, N]."
+            res = "RND <N> - to generate a random number between 1 and N, inclusive"
         elif params == "HIST":
-            res += "HIST                Show up to the last 5 valid operations for this connection only."
+            res = "HIST - to show the last 5 valid operations in the session"
         elif params == "HELP":
-            res += "HELP                [command] Show all commands, or detailed help for one command."
+            res = "HELP [command] - to display syntax and semantics of a specific command. \r\n If no command is specified, it will display all available commands and meanings"
         elif params == "QUIT":
-            res += "QUIT                End the session."
+            res = "QUIT - to end the current session of the arithmetic server"
         
         return success(res)
     elif command == "QUIT":
-        if params != "":
-            return error(f"{command} NEEDS NO PARAMETER.")
+        if not valid_param_count(0):
+            return invalid_param_count_error(command)
         return success("bye", closing=True)
     else:
-        return error(f"INVALID COMMAND: <{command}>. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
+        return error(f"Unknown operation {command}.")
 
 # Create a TCP/IP socket
 lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
