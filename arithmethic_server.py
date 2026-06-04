@@ -4,14 +4,12 @@
 ###
 
 import socket
-import sys
 import selectors
 import types
 import random
+import argparse
 
 sel = selectors.DefaultSelector()
-
-commands = ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]
 
 def accept_wrapper(sock: socket.socket):
     """
@@ -73,9 +71,9 @@ def process_req(msg: str):
     """
 
     def success(result: str, closing: bool = False) -> tuple[str,bool]:
-        return f"OK {result} \r\n", closing
+        return f"OK {result}\r", closing
     def error(message: str, closing: bool = False) -> tuple[str,bool]:
-        return f"ERR {message} \r\n", closing
+        return f"ERR {message}\r", closing
     def valid_param_count(count: int, exact: bool = True) -> bool:
         if not exact:
             return len(params.split(" ")) < count
@@ -181,30 +179,36 @@ def process_req(msg: str):
     else:
         return error(f"Unknown operation {command}.")
 
-# Create a TCP/IP socket
-lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+if __name__ == "__main__":
 
-# Bind the socket to the port
-server_address = ('127.0.0.1', 14350)
-print('starting up on {} port {}'.format(*server_address))
-lsock.bind(server_address)
+    # Create a TCP/IP socket
+    lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Listen for incoming connections
-lsock.listen()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=14350)
+    args = parser.parse_args()
 
-lsock.setblocking(False)
+    # Bind the socket to the port
+    server_address = ('127.0.0.1', args.port)
+    print('starting up on {} port {}'.format(*server_address))
+    lsock.bind(server_address)
 
-sel.register(lsock, selectors.EVENT_READ, data=None)
+    # Listen for incoming connections
+    lsock.listen()
 
-try:
-    while True:
-        events = sel.select(timeout=None)
-        for key, mask in events:
-            if key.data is None:
-                accept_wrapper(key.fileobj)
-            else:
-                service_connection(key,mask)
-except KeyboardInterrupt:
-    print("Caught keyboard interrupt, exiting")
-finally:
-    sel.close()
+    lsock.setblocking(False)
+
+    sel.register(lsock, selectors.EVENT_READ, data=None)
+
+    try:
+        while True:
+            events = sel.select(timeout=None)
+            for key, mask in events:
+                if key.data is None:
+                    accept_wrapper(key.fileobj)
+                else:
+                    service_connection(key,mask)
+    except KeyboardInterrupt:
+        print("Caught keyboard interrupt, exiting")
+    finally:
+        sel.close()
