@@ -1,6 +1,6 @@
 ### NOTE: Run this in the command-line as,
 ###
-###     python3 socket_echo_server.py
+###     python3 arithmethic_server.py --port 14350
 ###
 
 import socket
@@ -17,6 +17,7 @@ def accept_wrapper(sock: socket.socket):
     """
     connection, client_address = sock.accept()
     print('Accepted connection from ', client_address)
+    connection.send(b"OK Welcome to the CSc 113 Arithmetic Server!\r\n")
     connection.setblocking(False)
     data = types.SimpleNamespace(
         addr=client_address,
@@ -58,7 +59,7 @@ def service_connection(key: selectors.SelectorKey, mask):
             sel.unregister(sock)
             sock.close()
 
-def process_req(msg: str, hist : list[str]):
+def process_req(msg: bytes, hist : list[str]):
     """"
     Process a client's request for the server.\n
 
@@ -97,7 +98,7 @@ def process_req(msg: str, hist : list[str]):
         except Exception as e:
             return "ERR"
 
-    msg = msg.decode().strip()
+    msg = msg.decode().strip() #Turn message back into string and remove whitespace characters such as \r and \n.
     parts = msg.split(" ", 1)
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
@@ -171,7 +172,7 @@ def process_req(msg: str, hist : list[str]):
                 "QUIT - to end the current session of the arithmetic server"
             ]
             help_msg = "\r\n".join(lines)
-            return success(help_msg)
+            return success(help_msg + "\r\n")
 
         if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
             return error(f"INVALID COMMAND NAME. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
@@ -193,12 +194,12 @@ def process_req(msg: str, hist : list[str]):
         elif params == "QUIT":
             res = "QUIT - to end the current session of the arithmetic server"
         
-        return success(res)
+        return success(res + "\r\n")
 
     elif command == "QUIT":
         if not valid_param_count(0):
             return invalid_param_count_error(command)
-        return success("bye", closing=True)
+        return success("Bye.", closing=True)
 
     else:
         return error(f"Unknown operation {command}.")
