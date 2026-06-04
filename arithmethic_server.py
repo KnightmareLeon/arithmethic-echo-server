@@ -93,31 +93,41 @@ def process_req(msg: str):
     parts = msg.split(" ", 1)
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
-    if command == "ADD":
+
+    if command in ["ADD","SUB","MUL","DIV"]:
         if not valid_param_count(2):
             return invalid_param_count_error(command)
         param1, param2 = params.split(" ")
-    elif command == "SUB":
-        if not valid_param_count(2):
-            return invalid_param_count_error(command)
-        param1, param2 = params.split(" ")
-    elif command == "MUL":
-        if not valid_param_count(2):
-            return invalid_param_count_error(command)
-        param1, param2 = params.split(" ")
-    elif command == "DIV":
-        if not valid_param_count(2):
-            return invalid_param_count_error(command)
-        param1, param2 = params.split(" ")
+
+        param1_parsed = parse_int(param=param1)
+        param2_parsed = parse_int(param=param2)
+
+        if param1_parsed == "ERR":
+            return error(f"{param1} is not an integer.")
+        if param2_parsed == "ERR":
+            return error(f"{param2} is not an integer.")
+
+        if param2_parsed == 0 and command == "DIV":
+            return error(f"Division by 0.")
+
+        if command == "ADD":
+            return success(f"{param1_parsed + param2_parsed}")
+        if command == "SUB":
+            return success(f"{param1_parsed - param2_parsed}")
+        if command == "MUL":
+            return success(f"{param1_parsed * param2_parsed}")
+        if command == "DIV":
+            return success(f"{param1_parsed // param2_parsed}")
+
     elif command == "RND":
         if not valid_param_count(1):
             return invalid_param_count_error(command)
         param = parse_int(params)
         if param == "ERR":
-            return error(f"{param} IS NOT AN INTEGER.")
+            return error(f"{params} is not an integer.")
             
         if param < 1:
-            return error(f"{param} IS LESSER THAN 1. INTEGER MUST BE LARGER THAN 1.")
+            return error(f"{param} is lesser than 1. Argument integer must be larger than  1.")
 
         return success(f"{random.randint(1,param)}")
 
