@@ -35,9 +35,11 @@ def service_connection(key: selectors.SelectorKey, mask):
             while b"\n" in data.inb:
                 msg, data.inb = data.inb.split(b"\n", 1)
 
-                processed = process_req(msg)  # Process
-                data.outb += (processed + "\n").encode()
+                response = process_req(msg)  # Process
+                data.outb += (response[0] + "\n").encode()
 
+                if response[1]: # Sets connection to close
+                    data.closing = True
         else:
             print(f"Closing connection to {data.addr}")
             sel.unregister(sock)
@@ -47,6 +49,10 @@ def service_connection(key: selectors.SelectorKey, mask):
             print(f"Echoing {data.outb!r} to {data.addr}")
             sent = sock.send(data.outb)
             data.outb = data.outb[sent:]
+        if getattr(data, "closing", False) and not data.outb:
+            print(f"Closing connection to {data.addr}")
+            sel.unregister(sock)
+            sock.close()
 
 def process_req(msg: str):
     """"
@@ -66,10 +72,10 @@ def process_req(msg: str):
     \"ERR \<message\>\".
     """
 
-    def success(result: str) -> str:
-        return f"OK {result}"
-    def error(message: str) -> str:
-        return f"ERR {message}"
+    def success(result: str, closing: bool = False) -> tuple[str,bool]:
+        return f"OK {result}", closing
+    def error(message: str, closing: bool = False) -> tuple[str,bool]:
+        return f"ERR {message}", closing
     def parse_int(param: str):
         try:
             res = int(param)
@@ -117,25 +123,25 @@ def process_req(msg: str):
             return error(f"{command} NEEDS ONE OR NO PARAMETER.")
         if params == "":
             return success(
-        """
-    COMMANDS            MEANING
-    =========================================================================================
-    ADD <N1> <N2>       Add N1 and N2.
-    SUB <N1> <N2>       Subtract N2 from N1.
-    MUL <N1> <N2>       Multiply N1 by N2.
-    DIV <N1> <N2>       Integer-divide N1 by N2.
-    RND <N>             Return a random integer in [1, N].
-    HIST                Show up to the last 5 valid operations for this connection only.
-    HELP                [command] Show all commands, or detailed help for one command.
-    QUIT                End the session.
-        """
+"""
+COMMANDS            PARAMS
+==========================
+ADD                 <N1> <N2>
+SUB                 <N1> <N2>
+MUL                 <N1> <N2>
+DIV                 <N1> <N2>
+RND                 <N>
+HIST
+HELP
+QUIT
+"""
         )
 
         if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
             return error(f"INVALID COMMAND NAME. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
 
-        res = "\nCOMMANDS            MEANING\n"
-        res += "=============================\n"
+        res = "\nCOMMAND            MEANING\n"
+        res += "=======================================\n"
         if params == "ADD":
             res += "ADD <N1> <N2>       Add N1 and N2."
         elif params == "SUB":
@@ -155,8 +161,9 @@ def process_req(msg: str):
         
         return success(res)
     elif command == "QUIT":
-        if len(params.split(" ")) != 0:
+        if params != "":
             return error(f"{command} NEEDS NO PARAMETER.")
+        return success("bye", closing=True)
     else:
         return error(f"INVALID COMMAND: <{command}>. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
 
