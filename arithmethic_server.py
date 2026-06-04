@@ -41,6 +41,7 @@ def service_connection(key: selectors.SelectorKey, mask):
                 msg, data.inb = data.inb.split(b"\n", 1)
 
                 response = process_req(msg, data.hist)  # Process
+
                 data.outb += (response[0] + "\n").encode()
 
                 if response[1]: # Sets connection to close
@@ -74,7 +75,7 @@ def process_req(msg: bytes, hist : list[str]):
     QUIT ->                End the session. \n
 
     Client requests that are successfully processed will return \"OK \<result\>\", otherwise
-    \"ERR \<message\>\".
+    \"ERR \<message\>\". Client request are also limited up to 256 bytes.
     """
 
     def success(result: str, closing: bool = False) -> tuple[str,bool]:
@@ -97,6 +98,9 @@ def process_req(msg: bytes, hist : list[str]):
             return res
         except Exception as e:
             return "ERR"
+
+    if len(msg + b"\n") > 256:
+        return error("Command too long.")
 
     msg = msg.decode().strip() #Turn message back into string and remove whitespace characters such as \r and \n.
     parts = msg.split(" ", 1)
@@ -175,7 +179,7 @@ def process_req(msg: bytes, hist : list[str]):
             return success(help_msg + "\r\n")
 
         if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
-            return error(f"INVALID COMMAND NAME. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
+            return error(f"Invalid command name.")
 
         if params == "ADD":
             res = "ADD <N1> <N2> - to add N1 and N2"
@@ -202,6 +206,8 @@ def process_req(msg: bytes, hist : list[str]):
         return success("Bye.", closing=True)
 
     else:
+        if command == "":
+            return "", False
         return error(f"Unknown operation {command}.")
 
 if __name__ == "__main__":
