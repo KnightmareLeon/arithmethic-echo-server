@@ -81,7 +81,7 @@ def process_req(msg: str):
             return len(params.split(" ")) < count
         return params == "" if count == 0 else len(params.split(" ")) == count and params != ""
     def invalid_param_count_error(command: str):
-        return f"{error( f"Invalid number of arguments to {command}")[0]}", False
+        return error(f"Invalid number of arguments to {command}")
     def parse_int(param: str):
         try:
             res = int(param)
