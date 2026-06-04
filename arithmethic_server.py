@@ -51,7 +51,7 @@ def service_connection(key: selectors.SelectorKey, mask):
             sock.close()
     if mask & selectors.EVENT_WRITE:
         if data.outb:
-            print(f"Echoing {data.outb!r} to {data.addr}")
+            print(f"Sending {data.outb!r} to {data.addr}")
             sent = sock.send(data.outb)
             data.outb = data.outb[sent:]
         if data.closing and not data.outb:
