@@ -80,36 +80,45 @@ def process_req(msg: str):
     command, params = msg.split(" ", 1)
 
     res = ""
-    match command:
-        case "ADD" | "SUB" | "MUL" | "DIV":
-            if len(params.split(" ")) != 2:
-                return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
-            param1, param2 = params.split(" ")
-
-        case "RND":
-            if len(params.split(" ")) != 1:
-                return error(f"{command} NEEDS EXACTLY ONE PARAMETER.")
-            param = parse_int(params)
-
-            if param == "ERR":
-                return error(f"{param} IS NOT AN INTEGER.")
+    if command == "ADD":
+        if len(params.split(" ")) != 2:
+            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        param1, param2 = params.split(" ")
+    elif command == "SUB":
+        if len(params.split(" ")) != 2:
+            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        param1, param2 = params.split(" ")
+    elif command == "MUL":
+        if len(params.split(" ")) != 2:
+            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        param1, param2 = params.split(" ")
+    elif command == "DIV":
+        if len(params.split(" ")) != 2:
+            return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
+        param1, param2 = params.split(" ")
+    elif command == "RND":
+        if len(params.split(" ")) != 1:
+            return error(f"{command} NEEDS EXACTLY ONE PARAMETER.")
+        param = parse_int(params)
+        if param == "ERR":
+            return error(f"{param} IS NOT AN INTEGER.")
             
-            if param < 1:
-                return error(f"{param} IS LESSER THAN 1. INTEGER MUST BE LARGER THAN 1.")
+        if param < 1:
+            return error(f"{param} IS LESSER THAN 1. INTEGER MUST BE LARGER THAN 1.")
 
-            res = f"{random.randint(1,param)}"
+        res = f"{random.randint(1,param)}"
 
-        case "HIST":
-            if len(params.split(" ")) != 0:
-                return error(f"{command} NEEDS NO PARAMETER.")
-        case "HELP":
-            if len(params.split(" ")) > 1:
-                return error(f"{command} NEEDS ONE OR NO PARAMETER.")
-        case "QUIT":
-            if len(params.split(" ")) != 0:
-                return error(f"{command} NEEDS NO PARAMETER.")
-        case _:
-            return error(f"INVALID COMMAND: <{command}>. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
+    elif command == "HIST":
+        if len(params.split(" ")) != 0:
+            return error(f"{command} NEEDS NO PARAMETER.")
+    elif command == "HELP":
+        if len(params.split(" ")) > 1:
+            return error(f"{command} NEEDS ONE OR NO PARAMETER.")
+    elif command == "QUIT":
+        if len(params.split(" ")) != 0:
+            return error(f"{command} NEEDS NO PARAMETER.")
+    else:
+        return error(f"INVALID COMMAND: <{command}>. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
         
     return res
 # Create a TCP/IP socket
