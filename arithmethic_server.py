@@ -24,7 +24,7 @@ def accept_wrapper(sock: socket.socket):
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(connection, events, data=data)
 
-def service_connection(key: selectors.SelectorKey, mask: selectors._EventMask):
+def service_connection(key: selectors.SelectorKey, mask):
     sock: socket.socket = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
