@@ -8,8 +8,13 @@ import selectors
 import types
 import random
 import argparse
+import time
+import os
 
 sel = selectors.DefaultSelector()
+
+os.makedirs("logs", exist_ok=True)
+log_file = open(os.path.join("logs", "recv.log"), "a")
 
 def accept_wrapper(sock: socket.socket):
     """
@@ -34,20 +39,29 @@ def service_connection(key: selectors.SelectorKey, mask):
     data = key.data
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(1024)
+
+        timestamp = time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}"
+
+        log_line = (f"[{timestamp}] {data.addr[0]}:{data.addr[1]} "
+                    f"recv() -> {len(recv_data)} bytes {recv_data!r}\n")
+
+        log_file.write(log_line)
+        log_file.flush()
+
         if recv_data:
             data.inb += recv_data # Store raw stream
             data.inb = data.inb.replace(b"\r\n", b"\n")
             while b"\n" in data.inb:
                 msg, data.inb = data.inb.split(b"\n", 1)
 
-                if msg == b"":
+                if msg == b"": #If blank, ignore
                     continue
 
-                if len(msg) + 1> 256:
+                if len(msg) + 1 > 256:
                     data.outb += b"ERR Command too long.\r\n"
                     continue
 
-                response = process_req(msg, data.hist)  # Process
+                response = process_req(msg, data.hist)  # process
 
                 data.outb += (response[0] + "\n").encode()
 
@@ -251,3 +265,4 @@ if __name__ == "__main__":
         print("Caught keyboard interrupt, exiting")
     finally:
         sel.close()
+        log_file.close()
