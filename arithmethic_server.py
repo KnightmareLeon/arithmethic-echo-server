@@ -36,7 +36,7 @@ def service_connection(key: selectors.SelectorKey, mask):
                 msg, data.inb = data.inb.split(b"\n", 1)
 
                 processed = process_req(msg)  # Process
-                data.outb += processed + b"\n"
+                data.outb += (processed + "\n").encode()
 
         else:
             print(f"Closing connection to {data.addr}")
