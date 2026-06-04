@@ -33,12 +33,19 @@ def service_connection(key: selectors.SelectorKey, mask):
     sock: socket.socket = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
-        recv_data = sock.recv(16)
+        recv_data = sock.recv(1024)
         if recv_data:
             data.inb += recv_data # Store raw stream
-
+            data.inb = data.inb.replace(b"\r\n", b"\n")
             while b"\n" in data.inb:
                 msg, data.inb = data.inb.split(b"\n", 1)
+
+                if msg == b"":
+                    continue
+
+                if len(msg) + 1> 256:
+                    data.outb += b"ERR Command too long.\r\n"
+                    continue
 
                 response = process_req(msg, data.hist)  # Process
 
@@ -99,10 +106,7 @@ def process_req(msg: bytes, hist : list[str]):
         except Exception as e:
             return "ERR"
 
-    if len(msg + b"\n") > 256:
-        return error("Command too long.")
-
-    msg = msg.decode().strip() #Turn message back into string and remove whitespace characters such as \r and \n.
+    msg = msg.decode(errors="strict")
     parts = msg.split(" ", 1)
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
@@ -206,8 +210,6 @@ def process_req(msg: bytes, hist : list[str]):
         return success("Bye.", closing=True)
 
     else:
-        if command == "":
-            return "", False
         return error(f"Unknown operation {command}.")
 
 if __name__ == "__main__":
