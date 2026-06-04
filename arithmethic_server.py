@@ -18,7 +18,13 @@ def accept_wrapper(sock: socket.socket):
     connection, client_address = sock.accept()
     print('Accepted connection from ', client_address)
     connection.setblocking(False)
-    data = types.SimpleNamespace(addr=client_address, inb=b"", outb=b"")
+    data = types.SimpleNamespace(
+        addr=client_address,
+        inb=b"",
+        outb=b"",
+        closing=False,
+        hist=[]
+    )
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(connection, events, data=data)
 
@@ -33,7 +39,7 @@ def service_connection(key: selectors.SelectorKey, mask):
             while b"\n" in data.inb:
                 msg, data.inb = data.inb.split(b"\n", 1)
 
-                response = process_req(msg)  # Process
+                response = process_req(msg, data.hist)  # Process
                 data.outb += (response[0] + "\n").encode()
 
                 if response[1]: # Sets connection to close
@@ -47,12 +53,12 @@ def service_connection(key: selectors.SelectorKey, mask):
             print(f"Echoing {data.outb!r} to {data.addr}")
             sent = sock.send(data.outb)
             data.outb = data.outb[sent:]
-        if getattr(data, "closing", False) and not data.outb:
+        if data.closing and not data.outb:
             print(f"Closing connection to {data.addr}")
             sel.unregister(sock)
             sock.close()
 
-def process_req(msg: str):
+def process_req(msg: str, hist : list[str]):
     """"
     Process a client's request for the server.\n
 
@@ -80,6 +86,10 @@ def process_req(msg: str):
         return params == "" if count == 0 else len(params.split(" ")) == count and params != ""
     def invalid_param_count_error(command: str):
         return error(f"Invalid number of arguments to {command}")
+    def upd_hist(log: str):
+        hist.append(log)
+        if len(hist) > 5:
+            hist.pop(0)
     def parse_int(param: str):
         try:
             res = int(param)
@@ -109,13 +119,17 @@ def process_req(msg: str):
             return error(f"Division by 0.")
 
         if command == "ADD":
-            return success(f"{param1_parsed + param2_parsed}")
-        if command == "SUB":
-            return success(f"{param1_parsed - param2_parsed}")
-        if command == "MUL":
-            return success(f"{param1_parsed * param2_parsed}")
-        if command == "DIV":
-            return success(f"{param1_parsed // param2_parsed}")
+            res = param1_parsed + param2_parsed
+        elif command == "SUB":
+            res = param1_parsed - param2_parsed
+        elif command == "MUL":
+            res = param1_parsed * param2_parsed
+        else:
+            res = param1_parsed // param2_parsed
+        
+        upd_hist(f"{command} {param1_parsed} {param2_parsed} -> {res}")
+
+        return success(f"{res}")
 
     elif command == "RND":
         if not valid_param_count(1):
@@ -127,11 +141,19 @@ def process_req(msg: str):
         if param < 1:
             return error(f"{param} is lesser than 1. Argument integer must be larger than  1.")
 
-        return success(f"{random.randint(1,param)}")
+        res = random.randint(1,param)
+
+        upd_hist(f"{command} {param} -> {res}")
+
+        return success(f"{res}")
 
     elif command == "HIST":
         if not valid_param_count(0):
             return invalid_param_count_error(command)
+
+        res = "\r\n".join(hist)
+        return success("The last valid operations from this session (up to 5) are:\r\n" + res)
+
     elif command == "HELP":
         if not valid_param_count(2, exact=False):
             return invalid_param_count_error(command)
@@ -172,10 +194,12 @@ def process_req(msg: str):
             res = "QUIT - to end the current session of the arithmetic server"
         
         return success(res)
+
     elif command == "QUIT":
         if not valid_param_count(0):
             return invalid_param_count_error(command)
         return success("bye", closing=True)
+
     else:
         return error(f"Unknown operation {command}.")
 
