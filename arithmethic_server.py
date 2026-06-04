@@ -70,7 +70,7 @@ def process_req(msg: str):
         return f"OK {result}"
     def error(message: str) -> str:
         return f"ERR {message}"
-    def parse_int(param: str) -> int | str:
+    def parse_int(param: str):
         try:
             res = int(param)
             return res
