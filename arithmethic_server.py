@@ -77,7 +77,7 @@ def process_req(msg: str):
         except Exception as e:
             return "ERR"
 
-    msg = msg.decode()
+    msg = msg.decode().strip()
     parts = msg.split(" ", 1)
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
