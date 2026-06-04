@@ -30,12 +30,12 @@ def service_connection(key: selectors.SelectorKey, mask):
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(16)
         if recv_data:
-            data.inb += recv_data #Store raw stream
+            data.inb += recv_data # Store raw stream
 
             while b"\n" in data.inb:
                 msg, data.inb = data.inb.split(b"\n", 1)
 
-                processed = process_req(msg)   # 👈 PROCESS HERE
+                processed = process_req(msg)  # Process
                 data.outb += processed + b"\n"
 
         else:
@@ -77,6 +77,7 @@ def process_req(msg: str):
         except Exception as e:
             return "ERR"
 
+    msg = msg.decode()
     command, params = msg.split(" ", 1)
 
     res = ""
