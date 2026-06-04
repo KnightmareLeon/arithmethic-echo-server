@@ -81,8 +81,6 @@ def process_req(msg: str):
     parts = msg.split(" ", 1)
     command = parts[0]
     params = parts[1] if len(parts) > 1 else ""
-
-    res = ""
     if command == "ADD":
         if len(params.split(" ")) != 2:
             return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
@@ -100,7 +98,7 @@ def process_req(msg: str):
             return error(f"{command} NEEDS EXACTLY TWO PARAMETERS.")
         param1, param2 = params.split(" ")
     elif command == "RND":
-        if len(params.split(" ")) != 1:
+        if len(params.split(" ")) != 1 or params == "":
             return error(f"{command} NEEDS EXACTLY ONE PARAMETER.")
         param = parse_int(params)
         if param == "ERR":
@@ -109,7 +107,7 @@ def process_req(msg: str):
         if param < 1:
             return error(f"{param} IS LESSER THAN 1. INTEGER MUST BE LARGER THAN 1.")
 
-        res = f"{random.randint(1,param)}"
+        return success(f"{random.randint(1,param)}")
 
     elif command == "HIST":
         if len(params.split(" ")) != 0:
@@ -117,13 +115,51 @@ def process_req(msg: str):
     elif command == "HELP":
         if len(params.split(" ")) > 1:
             return error(f"{command} NEEDS ONE OR NO PARAMETER.")
+        if params == "":
+            return success(
+        """
+    COMMANDS            MEANING
+    =========================================================================================
+    ADD <N1> <N2>       Add N1 and N2.
+    SUB <N1> <N2>       Subtract N2 from N1.
+    MUL <N1> <N2>       Multiply N1 by N2.
+    DIV <N1> <N2>       Integer-divide N1 by N2.
+    RND <N>             Return a random integer in [1, N].
+    HIST                Show up to the last 5 valid operations for this connection only.
+    HELP                [command] Show all commands, or detailed help for one command.
+    QUIT                End the session.
+        """
+        )
+
+        if params not in ["ADD","SUB","MUL","DIV","RND","HIST","HELP","QUIT"]:
+            return error(f"INVALID COMMAND NAME. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
+
+        res = "\nCOMMANDS            MEANING\n"
+        res += "=============================\n"
+        if params == "ADD":
+            res += "ADD <N1> <N2>       Add N1 and N2."
+        elif params == "SUB":
+            res += "SUB <N1> <N2>       Subtract N2 from N1."
+        elif params == "MUL":
+            res += "MUL <N1> <N2>       Multiply N1 by N2."
+        elif params == "DIV":
+            res += "DIV <N1> <N2>       Integer-divide N1 by N2."
+        elif params == "RND":
+            res += "RND <N>             Return a random integer in [1, N]."
+        elif params == "HIST":
+            res += "HIST                Show up to the last 5 valid operations for this connection only."
+        elif params == "HELP":
+            res += "HELP                [command] Show all commands, or detailed help for one command."
+        elif params == "QUIT":
+            res += "QUIT                End the session."
+        
+        return success(res)
     elif command == "QUIT":
         if len(params.split(" ")) != 0:
             return error(f"{command} NEEDS NO PARAMETER.")
     else:
         return error(f"INVALID COMMAND: <{command}>. USE \'HELP\' TO LIST ALL VALID COMMANDS.")
-        
-    return res
+
 # Create a TCP/IP socket
 lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
