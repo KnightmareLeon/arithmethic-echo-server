@@ -109,7 +109,7 @@ def process_req(msg: bytes, hist : list[str]):
             return len(params.split(" ")) < count
         return params == "" if count == 0 else len(params.split(" ")) == count and params != ""
     def invalid_param_count_error(command: str):
-        return error(f"Invalid number of arguments to {command}")
+        return error(f"Invalid number of arguments to {command}.")
     def upd_hist(log: str):
         hist.append(log)
         if len(hist) > 5:
